@@ -1,4 +1,5 @@
 const API_URL = 'http://173.249.28.205:8080/flightlog';
+const FACTIONS_API_URL = 'http://173.249.28.205:8080/factions';
 const TORN_API_BASE = 'https://api.torn.com/v2';
 
 const tableBody = document.getElementById('tableBody');
@@ -102,22 +103,51 @@ async function makeTornApiRequest(endpoint, selections = []) {
     return data;
 }
 
-// Fetch username for a user_id
-async function fetchUsername(userId) {
-    if (!userId) return null;
-    
+// Fetch usernames for multiple user_ids (with caching)
+const usernameCache = new Map();
+
+// Fetch faction members and build username cache
+async function fetchFactionMembers() {
     try {
-        const data = await makeTornApiRequest(`/user/${userId}/basic`);
-        // Username is at profile.name in the API response
-        return data.profile?.name || null;
+        // Get all factions from REST API
+        const response = await fetch(FACTIONS_API_URL);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const factionsData = await response.json();
+        
+        if (!Array.isArray(factionsData)) {
+            return;
+        }
+        
+        // Fetch members for each faction in parallel using Torn API
+        const factionPromises = factionsData.map(async (faction) => {
+            try {
+                const factionId = faction.faction_id;
+                const membersData = await makeTornApiRequest(`/faction/${factionId}/members`);
+                
+                // Map members to username cache (members is an array)
+                if (membersData.members && Array.isArray(membersData.members)) {
+                    membersData.members.forEach((member) => {
+                        if (member.id && member.name) {
+                            const userIdNum = parseInt(member.id, 10);
+                            usernameCache.set(userIdNum, member.name);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn(`Error fetching members for faction ${faction.faction_id}:`, err);
+            }
+        });
+        
+        await Promise.all(factionPromises);
     } catch (err) {
-        console.error(`Error fetching username for user ${userId}:`, err);
-        return null;
+        console.warn('Error fetching faction members:', err);
     }
 }
 
-// Fetch usernames for multiple user_ids (with caching)
-const usernameCache = new Map();
 async function fetchUsernames(userIds) {
     const uniqueUserIds = [...new Set(userIds.filter(id => id))];
     const usernames = new Map();
@@ -125,20 +155,12 @@ async function fetchUsernames(userIds) {
     // Check cache first
     const uncachedIds = uniqueUserIds.filter(id => !usernameCache.has(id));
     
-    // Fetch uncached usernames
+    // Fetch uncached usernames from factions only
     if (uncachedIds.length > 0) {
         const apiKey = getApiKey();
         if (apiKey) {
-            // Fetch all usernames in parallel
-            const fetchPromises = uncachedIds.map(async (userId) => {
-                const username = await fetchUsername(userId);
-                if (username) {
-                    usernameCache.set(userId, username);
-                }
-                return { userId, username };
-            });
-            
-            await Promise.all(fetchPromises);
+            // Fetch from faction members
+            await fetchFactionMembers();
         }
     }
     
@@ -160,7 +182,8 @@ const FLIGHT_TIMES = {
     'Cayman Islands': 1500, // 0:25 hours = 25*60 = 1500 seconds
     'Canada': 1740,        // 0:29 hours = 29*60 = 1740 seconds
     'United Kingdom': 6660, // 1:51 hours = 1*3600 + 51*60 = 6660 seconds
-    'Swiss': 7380,         // 2:03 hours = 2*3600 + 3*60 = 7380 seconds
+    'Switzerland': 7380,   // 2:03 hours = 2*3600 + 3*60 = 7380 seconds
+    'Swiss': 7380,         // 2:03 hours = 2*3600 + 3*60 = 7380 seconds (alias for Switzerland)
     'UAE': 11400,          // 3:10 hours = 3*3600 + 10*60 = 11400 seconds
     'South Africa': 12480  // 3:28 hours = 3*3600 + 28*60 = 12480 seconds
 };
