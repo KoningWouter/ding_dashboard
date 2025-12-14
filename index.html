@@ -13,26 +13,57 @@
             <button id="refreshBtn" class="refresh-btn">Refresh</button>
         </header>
         
-        <div id="loading" class="loading">Loading flight logs...</div>
-        <div id="error" class="error" style="display: none;"></div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+        </div>
         
-        <div class="table-container">
-            <table id="flightTable">
-                <thead>
-                    <tr>
-                        <th>User ID</th>
-                        <th>Flight Log</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab" class="tab-content active">
+            <div id="loading" class="loading">Loading flight logs...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            
+            <div class="table-container">
+                <table id="flightTable">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Flight Log</th>
+                            <th>Landing Time</th>
+                            <th>Flight Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settingsTab" class="tab-content">
+            <div class="settings-container">
+                <h2>Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="apiKeyInput">Torn API Key (Limited Access)</label>
+                        <input 
+                            type="password" 
+                            id="apiKeyInput" 
+                            class="api-key-input" 
+                            placeholder="Enter your Torn API key"
+                        />
+                        <p class="form-help">Your API key will be stored locally in your browser. Use a key with limited access permissions.</p>
+                        <button id="saveApiKeyBtn" class="save-btn">Save API Key</button>
+                        <div id="apiKeyStatus" class="status-message"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     <script src="script.js"></script>
 </body>
 </html>
+
 
