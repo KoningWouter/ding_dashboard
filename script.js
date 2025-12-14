@@ -103,6 +103,44 @@ async function makeTornApiRequest(endpoint, selections = []) {
     return data;
 }
 
+// Fetch travel data for a user
+async function fetchUserTravelData(userId) {
+    try {
+        const data = await makeTornApiRequest(`/user/${userId}/travel`);
+        return data;
+    } catch (err) {
+        console.error(`Error fetching travel data for user ${userId}:`, err);
+        return null;
+    }
+}
+
+// Fetch and log travel data for all users currently traveling
+async function fetchAndLogTravelData(userIds) {
+    const uniqueUserIds = [...new Set(userIds.filter(id => id))];
+    
+    console.log(`\n=== Fetching travel data for ${uniqueUserIds.length} users ===\n`);
+    
+    // Fetch travel data for all users in parallel
+    const travelDataPromises = uniqueUserIds.map(async (userId) => {
+        const travelData = await fetchUserTravelData(userId);
+        return { userId, travelData };
+    });
+    
+    const results = await Promise.all(travelDataPromises);
+    
+    // Log all travel data
+    results.forEach(({ userId, travelData }) => {
+        console.log(`\n--- User ID: ${userId} ---`);
+        if (travelData) {
+            console.log('Travel Data:', JSON.stringify(travelData, null, 2));
+        } else {
+            console.log('No travel data available');
+        }
+    });
+    
+    console.log(`\n=== Finished fetching travel data ===\n`);
+}
+
 // Fetch usernames for multiple user_ids (with caching)
 const usernameCache = new Map();
 
@@ -385,6 +423,13 @@ async function fetchFlightLogs() {
             } catch (err) {
                 console.warn('Could not fetch usernames:', err);
                 // Continue with user_ids if username fetch fails
+            }
+            
+            // Fetch and log travel data for all users
+            try {
+                await fetchAndLogTravelData(userIds);
+            } catch (err) {
+                console.warn('Could not fetch travel data:', err);
             }
         }
         
