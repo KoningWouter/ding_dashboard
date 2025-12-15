@@ -125,6 +125,12 @@ table {
     background: white;
 }
 
+/* Ensure only three columns render even if stale markup lingers */
+#flightTable th:nth-child(n+4),
+#flightTable td:nth-child(n+4) {
+    display: none;
+}
+
 thead {
     background: #f8f9fa;
 }
