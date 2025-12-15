@@ -395,7 +395,7 @@ async function fetchFlightLogs() {
         const logs = Array.isArray(data) ? data : [data];
         
         if (logs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #6c757d;">No flight logs found</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #6c757d;">No flight logs found</td></tr>';
             return;
         }
         
@@ -439,11 +439,6 @@ async function fetchFlightLogs() {
             // Get username or fallback to user_id
             const username = usernames.get(log.user_id) || log.user_id || 'N/A';
             
-            // Extract country and get flight time
-            const country = extractDestination(log.flight_log);
-            const flightTimeSeconds = getFlightTime(country);
-            const flightTimeDisplay = flightTimeSeconds !== null ? `${flightTimeSeconds} seconds` : 'N/A';
-            
             // Calculate landing time and format with color
             const landingTime = calculateLandingTime(log.timestamp, log.flight_log);
             let landingTimeDisplay;
@@ -459,7 +454,6 @@ async function fetchFlightLogs() {
                 <td>${username}</td>
                 <td>${log.flight_log || 'N/A'}</td>
                 <td>${landingTimeDisplay}</td>
-                <td>${flightTimeDisplay}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -468,7 +462,7 @@ async function fetchFlightLogs() {
         console.error('Error fetching flight logs:', err);
         error.textContent = `Error loading flight logs: ${err.message}`;
         error.style.display = 'block';
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
     } finally {
         loading.style.display = 'none';
     }
