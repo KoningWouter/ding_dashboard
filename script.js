@@ -11,11 +11,6 @@ const refreshBtn = document.getElementById('refreshBtn');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 
-// Settings elements
-const apiKeyInput = document.getElementById('apiKeyInput');
-const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-const apiKeyStatus = document.getElementById('apiKeyStatus');
-
 // API Key management
 function getApiKey() {
     return localStorage.getItem('tornApiKey') || '';
@@ -29,12 +24,6 @@ function saveApiKey(apiKey) {
     return false;
 }
 
-function loadApiKey() {
-    const apiKey = getApiKey();
-    if (apiKey) {
-        apiKeyInput.value = apiKey;
-    }
-}
 
 // Tab switching
 function initTabs() {
@@ -53,29 +42,6 @@ function initTabs() {
     });
 }
 
-// Settings initialization
-function initSettings() {
-    loadApiKey();
-    
-    saveApiKeyBtn.addEventListener('click', () => {
-        const apiKey = apiKeyInput.value.trim();
-        
-        if (saveApiKey(apiKey)) {
-            apiKeyStatus.textContent = 'API key saved successfully!';
-            apiKeyStatus.className = 'status-message success';
-            apiKeyStatus.style.display = 'block';
-            
-            // Hide status message after 3 seconds
-            setTimeout(() => {
-                apiKeyStatus.style.display = 'none';
-            }, 3000);
-        } else {
-            apiKeyStatus.textContent = 'Please enter a valid API key.';
-            apiKeyStatus.className = 'status-message error';
-            apiKeyStatus.style.display = 'block';
-        }
-    });
-}
 
 // Make Torn API request
 async function makeTornApiRequest(endpoint, selections = []) {
@@ -413,19 +379,9 @@ async function fetchFlightLogs() {
             return getLandingTime(b) - getLandingTime(a);
         });
         
-        // Fetch usernames for all user_ids (only if API key is set)
-        const userIds = logs.map(log => log.user_id).filter(id => id);
-        let usernames = new Map();
-        
+        // Fetch and log travel data for all users (only if API key is set)
         if (getApiKey()) {
-            try {
-                usernames = await fetchUsernames(userIds);
-            } catch (err) {
-                console.warn('Could not fetch usernames:', err);
-                // Continue with user_ids if username fetch fails
-            }
-            
-            // Fetch and log travel data for all users
+            const userIds = logs.map(log => log.user_id).filter(id => id);
             try {
                 await fetchAndLogTravelData(userIds);
             } catch (err) {
@@ -436,8 +392,8 @@ async function fetchFlightLogs() {
         logs.forEach(log => {
             const row = document.createElement('tr');
             
-            // Get username or fallback to user_id
-            const username = usernames.get(log.user_id) || log.user_id || 'N/A';
+            // Use username from API response, fallback to user_id or 'N/A'
+            const username = log.username || log.user_id || 'N/A';
             
             // Extract country and get flight time
             const country = extractDestination(log.flight_log);
@@ -477,9 +433,8 @@ async function fetchFlightLogs() {
 // Refresh button event listener
 refreshBtn.addEventListener('click', fetchFlightLogs);
 
-// Initialize tabs and settings
+// Initialize tabs
 initTabs();
-initSettings();
 
 // Initial load
 fetchFlightLogs();
