@@ -1,6 +1,4 @@
 const API_URL = 'http://173.249.28.205:8080/flightlog';
-const FACTIONS_API_URL = 'http://173.249.28.205:8080/factions';
-const TORN_API_BASE = 'https://api.torn.com/v2';
 
 const tableBody = document.getElementById('tableBody');
 const loading = document.getElementById('loading');
@@ -10,20 +8,6 @@ const refreshBtn = document.getElementById('refreshBtn');
 // Tab elements
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
-
-// API Key management
-function getApiKey() {
-    return localStorage.getItem('tornApiKey') || '';
-}
-
-function saveApiKey(apiKey) {
-    if (apiKey && apiKey.trim()) {
-        localStorage.setItem('tornApiKey', apiKey.trim());
-        return true;
-    }
-    return false;
-}
-
 
 // Tab switching
 function initTabs() {
@@ -40,140 +24,6 @@ function initTabs() {
             document.getElementById(`${targetTab}Tab`).classList.add('active');
         });
     });
-}
-
-
-// Make Torn API request
-async function makeTornApiRequest(endpoint, selections = []) {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error('API key not set. Please configure it in Settings.');
-    }
-    
-    const selectionsParam = selections.length > 0 ? `&selections=${selections.join(',')}` : '';
-    const url = `${TORN_API_BASE}${endpoint}?key=${apiKey}${selectionsParam}`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-        throw new Error(`Torn API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Check for API errors
-    if (data.error) {
-        throw new Error(`Torn API error: ${data.error.error || 'Unknown error'}`);
-    }
-    
-    return data;
-}
-
-// Fetch travel data for a user
-async function fetchUserTravelData(userId) {
-    try {
-        const data = await makeTornApiRequest(`/user/${userId}/travel`);
-        return data;
-    } catch (err) {
-        console.error(`Error fetching travel data for user ${userId}:`, err);
-        return null;
-    }
-}
-
-// Fetch and log travel data for all users currently traveling
-async function fetchAndLogTravelData(userIds) {
-    const uniqueUserIds = [...new Set(userIds.filter(id => id))];
-    
-    console.log(`\n=== Fetching travel data for ${uniqueUserIds.length} users ===\n`);
-    
-    // Fetch travel data for all users in parallel
-    const travelDataPromises = uniqueUserIds.map(async (userId) => {
-        const travelData = await fetchUserTravelData(userId);
-        return { userId, travelData };
-    });
-    
-    const results = await Promise.all(travelDataPromises);
-    
-    // Log all travel data
-    results.forEach(({ userId, travelData }) => {
-        console.log(`\n--- User ID: ${userId} ---`);
-        if (travelData) {
-            console.log('Travel Data:', JSON.stringify(travelData, null, 2));
-        } else {
-            console.log('No travel data available');
-        }
-    });
-    
-    console.log(`\n=== Finished fetching travel data ===\n`);
-}
-
-// Fetch usernames for multiple user_ids (with caching)
-const usernameCache = new Map();
-
-// Fetch faction members and build username cache
-async function fetchFactionMembers() {
-    try {
-        // Get all factions from REST API
-        const response = await fetch(FACTIONS_API_URL);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const factionsData = await response.json();
-        
-        if (!Array.isArray(factionsData)) {
-            return;
-        }
-        
-        // Fetch members for each faction in parallel using Torn API
-        const factionPromises = factionsData.map(async (faction) => {
-            try {
-                const factionId = faction.faction_id;
-                const membersData = await makeTornApiRequest(`/faction/${factionId}/members`);
-                
-                // Map members to username cache (members is an array)
-                if (membersData.members && Array.isArray(membersData.members)) {
-                    membersData.members.forEach((member) => {
-                        if (member.id && member.name) {
-                            const userIdNum = parseInt(member.id, 10);
-                            usernameCache.set(userIdNum, member.name);
-                        }
-                    });
-                }
-            } catch (err) {
-                console.warn(`Error fetching members for faction ${faction.faction_id}:`, err);
-            }
-        });
-        
-        await Promise.all(factionPromises);
-    } catch (err) {
-        console.warn('Error fetching faction members:', err);
-    }
-}
-
-async function fetchUsernames(userIds) {
-    const uniqueUserIds = [...new Set(userIds.filter(id => id))];
-    const usernames = new Map();
-    
-    // Check cache first
-    const uncachedIds = uniqueUserIds.filter(id => !usernameCache.has(id));
-    
-    // Fetch uncached usernames from factions only
-    if (uncachedIds.length > 0) {
-        const apiKey = getApiKey();
-        if (apiKey) {
-            // Fetch from faction members
-            await fetchFactionMembers();
-        }
-    }
-    
-    // Build result map from cache
-    uniqueUserIds.forEach(userId => {
-        usernames.set(userId, usernameCache.get(userId) || userId);
-    });
-    
-    return usernames;
 }
 
 // Flight times in seconds (Torn <-> destination)
@@ -378,16 +228,6 @@ async function fetchFlightLogs() {
             
             return getLandingTime(b) - getLandingTime(a);
         });
-        
-        // Fetch and log travel data for all users (only if API key is set)
-        if (getApiKey()) {
-            const userIds = logs.map(log => log.user_id).filter(id => id);
-            try {
-                await fetchAndLogTravelData(userIds);
-            } catch (err) {
-                console.warn('Could not fetch travel data:', err);
-            }
-        }
         
         logs.forEach(log => {
             const row = document.createElement('tr');
