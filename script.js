@@ -243,7 +243,18 @@ async function fetchFlightLogs() {
                 const landingDisplay = formatLandingTimeDisplay(landingTime);
                 landingTimeDisplay = `<span style="color: ${landingDisplay.color};">${landingDisplay.text}</span>`;
             } else {
-                landingTimeDisplay = formatTimestamp(log.timestamp);
+                // Fallback: show relative time from timestamp itself
+                let unixTimestamp = typeof log.timestamp === 'string' ? parseInt(log.timestamp, 10) : log.timestamp;
+                if (!isNaN(unixTimestamp)) {
+                    // Convert to seconds if it's in milliseconds (13 digits)
+                    if (unixTimestamp.toString().length > 10) {
+                        unixTimestamp = Math.floor(unixTimestamp / 1000);
+                    }
+                    const fallbackDisplay = formatLandingTimeDisplay(unixTimestamp);
+                    landingTimeDisplay = `<span style="color: ${fallbackDisplay.color};">${fallbackDisplay.text}</span>`;
+                } else {
+                    landingTimeDisplay = 'N/A';
+                }
             }
             
             row.innerHTML = `
