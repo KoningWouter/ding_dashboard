@@ -13,29 +13,22 @@
             <button id="refreshBtn" class="refresh-btn">Refresh</button>
         </header>
         
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-        </div>
+        <div id="loading" class="loading">Loading flight logs...</div>
+        <div id="error" class="error" style="display: none;"></div>
         
-        <!-- Dashboard Tab -->
-        <div id="dashboardTab" class="tab-content active">
-            <div id="loading" class="loading">Loading flight logs...</div>
-            <div id="error" class="error" style="display: none;"></div>
-            
-            <div class="table-container">
-                <table id="flightTable">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Flight Log</th>
-                            <th>Landing Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-container">
+            <table id="flightTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Flight Log</th>
+                        <th>Landing Time</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
         </div>
     </div>
     

@@ -5,27 +5,6 @@ const loading = document.getElementById('loading');
 const error = document.getElementById('error');
 const refreshBtn = document.getElementById('refreshBtn');
 
-// Tab elements
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-
-// Tab switching
-function initTabs() {
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
-            
-            // Remove active class from all tabs and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked tab and corresponding content
-            button.classList.add('active');
-            document.getElementById(`${targetTab}Tab`).classList.add('active');
-        });
-    });
-}
-
 // Flight times in seconds (Torn <-> destination)
 const FLIGHT_TIMES = {
     'Argentina': 7020,     // 1:57 hours = 1*3600 + 57*60 = 7020 seconds
@@ -192,11 +171,17 @@ function formatLandingTimeDisplay(landingTimestamp) {
     }
 }
 
+// Track if this is the initial load
+let isInitialLoad = true;
+
 // Fetch and display flight logs
 async function fetchFlightLogs() {
-    loading.style.display = 'block';
+    // Only show loading and clear table on initial load
+    if (isInitialLoad) {
+        loading.style.display = 'block';
+        tableBody.innerHTML = '';
+    }
     error.style.display = 'none';
-    tableBody.innerHTML = '';
     
     try {
         const response = await fetch(API_URL);
@@ -212,6 +197,10 @@ async function fetchFlightLogs() {
         
         if (logs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #6c757d;">No flight logs found</td></tr>';
+            if (isInitialLoad) {
+                loading.style.display = 'none';
+            }
+            isInitialLoad = false;
             return;
         }
         
@@ -229,9 +218,12 @@ async function fetchFlightLogs() {
             return getLandingTime(b) - getLandingTime(a);
         });
         
-        logs.forEach(log => {
-            const row = document.createElement('tr');
-            
+        // Clear table only on initial load, otherwise update in place
+        if (isInitialLoad) {
+            tableBody.innerHTML = '';
+        }
+        
+        logs.forEach((log, index) => {
             // Use username from API response, fallback to user_id or 'N/A'
             const username = log.username || log.user_id || 'N/A';
             
@@ -257,29 +249,54 @@ async function fetchFlightLogs() {
                 }
             }
             
-            row.innerHTML = `
+            const rowContent = `
                 <td>${username}</td>
                 <td>${log.flight_log || 'N/A'}</td>
                 <td>${landingTimeDisplay}</td>
             `;
-            tableBody.appendChild(row);
+            
+            if (isInitialLoad) {
+                // Create new row on initial load
+                const row = document.createElement('tr');
+                row.innerHTML = rowContent;
+                tableBody.appendChild(row);
+            } else {
+                // Update existing row or create new one if needed
+                const existingRow = tableBody.children[index];
+                if (existingRow) {
+                    existingRow.innerHTML = rowContent;
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = rowContent;
+                    tableBody.appendChild(row);
+                }
+            }
         });
+        
+        // Remove any extra rows if the new data has fewer items
+        if (!isInitialLoad && tableBody.children.length > logs.length) {
+            while (tableBody.children.length > logs.length) {
+                tableBody.removeChild(tableBody.lastChild);
+            }
+        }
         
     } catch (err) {
         console.error('Error fetching flight logs:', err);
         error.textContent = `Error loading flight logs: ${err.message}`;
         error.style.display = 'block';
-        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
+        if (isInitialLoad) {
+            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
+        }
     } finally {
-        loading.style.display = 'none';
+        if (isInitialLoad) {
+            loading.style.display = 'none';
+        }
+        isInitialLoad = false;
     }
 }
 
 // Refresh button event listener
 refreshBtn.addEventListener('click', fetchFlightLogs);
-
-// Initialize tabs
-initTabs();
 
 // Initial load
 fetchFlightLogs();
