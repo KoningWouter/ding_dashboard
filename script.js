@@ -196,7 +196,7 @@ async function fetchFlightLogs() {
         const logs = Array.isArray(data) ? data : [data];
         
         if (logs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #6c757d;">No flight logs found</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #6c757d;">No flight logs found</td></tr>';
             if (isInitialLoad) {
                 loading.style.display = 'none';
             }
@@ -249,7 +249,17 @@ async function fetchFlightLogs() {
                 }
             }
             
+            // Get faction_tag from API response and create image
+            const factionTag = log.faction_tag || '';
+            let factionImage = '';
+            if (factionTag) {
+                factionImage = `<img src="https://factiontags.torn.com/${factionTag}" alt="Faction" style="max-height: 24px; vertical-align: middle;">`;
+            } else {
+                factionImage = 'N/A';
+            }
+            
             const rowContent = `
+                <td>${factionImage}</td>
                 <td>${username}</td>
                 <td>${log.flight_log || 'N/A'}</td>
                 <td>${landingTimeDisplay}</td>
@@ -285,7 +295,7 @@ async function fetchFlightLogs() {
         error.textContent = `Error loading flight logs: ${err.message}`;
         error.style.display = 'block';
         if (isInitialLoad) {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #e74c3c;">Failed to load data</td></tr>';
         }
     } finally {
         if (isInitialLoad) {
